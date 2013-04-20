@@ -34,10 +34,11 @@ class DayHandler(RequestHandler):
     if self.request.get('d1') and self.request.get('d2'):
       d1 = datetime.strptime(self.request.get('d1'), '%Y%m%d')
       d2 = datetime.strptime(self.request.get('d2'), '%Y%m%d')
-      days = list(Day.all().filter('date >=', d1).filter('date <=', d2))
-      #logging.error('filtering >= %s and <= %s' % (d1,d2,))
+      dq = Day.all().filter('date >=', d1).filter('date <=', d2).order('date')
     else:
-      days = list(Day.all())
+      dq = Day.all().order('date')
+    
+    ndays = dq.count()
 
     t1 = None
     t2 = None
@@ -50,17 +51,18 @@ class DayHandler(RequestHandler):
       t2 = d1 + delta2
       
     stat = {'status':True,'days':[]}
-    day_count = len(days)
-    totalh = HEIGHT * day_count
-    #logging.error('totalh:%s' % totalh)
+    totalh = HEIGHT * ndays
+    logging.error('totalh:%s' % totalh)
     stride = int(ceil(float(totalh) / height))
     pos = 0
     totalh = 0
-    #logging.error('stride:%s' % stride)
-    for day in days:
+    logging.error('stride:%s' % stride)
+    for dayN in range(0,ndays):
       pos += 1
-      if pos == day_count or (pos % stride == 1 and totalh + day.height < height):
-        totalh += day.height
+      logging.error('pos == day_count: %s' % (pos==ndays))
+      logging.error('pos %% stride == 1: %s' % (pos % stride == 1))
+      if pos == ndays or (pos % stride == 0):
+        totalh += HEIGHT
         dt1 = None
         dt2 = None
         if t1 and t2:
@@ -69,6 +71,7 @@ class DayHandler(RequestHandler):
           logging.error('dt1: %s' % dt1)
           logging.error('dt2: %s' % dt2)
         
+        day = dq.fetch(1, offset=dayN)[0]
         stat['days'].append(day.to_json(width, dt1, dt2))
       
     self.response.out.write(json.dumps(stat))
@@ -96,7 +99,7 @@ class DayHandler(RequestHandler):
       next = Day.all().count() + 1
       label = '201109%02d' % next
       date = datetime.strptime(label, '%Y%m%d')
-      day = Day(label=label,date=date, width=160, height=120)
+      day = Day(label=label,date=date, width=WIDTH, height=HEIGHT)
       day.put()
       
       for i in range(0,count):

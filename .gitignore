@@ -2,3 +2,5 @@
 /handlers.pyc
 /index.yaml
 /models.pyc
+/src/*.pyc
+/src/index.yaml
